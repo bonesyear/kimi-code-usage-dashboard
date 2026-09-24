@@ -1,0 +1,6 @@
+__pycache__/
+*.bak
+usage_cache.json
+dashboard_cache.json
+kimi_widget.json
+quota_capsule.json
