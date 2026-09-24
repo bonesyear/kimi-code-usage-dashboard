@@ -183,9 +183,10 @@ h2 .en{color:var(--muted); font-weight:normal; font-size:11px; letter-spacing:0.
 .st{display:flex; justify-content:space-between; font-size:10px; letter-spacing:1px; color:var(--muted); padding:2px 0;
   border-bottom:1px solid rgba(111,46,31,0.5);}
 .st b{color:var(--text); font-weight:normal; font-family:Consolas,monospace;}
-.tickfield{height:26px; border:1px solid var(--line); margin-top:8px;
+.tickfield{height:26px; border:1px solid var(--line); margin-top:8px; position:relative;
   background:repeating-linear-gradient(90deg, rgba(255,209,102,0.35) 0 1px, transparent 1px 8px),
              repeating-linear-gradient(0deg, rgba(255,159,67,0.12) 0 1px, transparent 1px 8px);}
+.tickfield svg{position:absolute; inset:0; width:100%; height:100%; display:block;}
 /* 通用 */
 .label{color:var(--muted); font-size:12px; letter-spacing:0.08em;}
 .mini{font-family:"Bahnschrift",Consolas,monospace; font-size:10px; letter-spacing:1px; color:var(--muted); text-transform:uppercase; margin-top:10px;}
@@ -338,7 +339,24 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
       <div class="st"><span>TURNS</span><b class="num" id="rail3">--</b></div>
       <div class="st"><span>FEED</span><b class="num">WIRE.JSONL</b></div>
     </div>
-    <div class="tickfield"></div>
+    <div class="tickfield">
+      <svg id="ecg" viewBox="0 0 120 22" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <filter id="ecgglow" x="-20%" y="-60%" width="140%" height="220%">
+            <feGaussianBlur stdDeviation="1.0" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <!-- 隐藏轨迹：3 个波峰（周期 40），y 约束在网格内（0..16.5/22），不显示 -->
+          <path id="ecgpath" fill="none" d="M0,14 H8 l1,-2 l1,2 H16 l1.5,2.5 l2,-16.5 l2,16.5 l1.5,-2.5 H40 H48 l1,-2 l1,2 H56 l1.5,2.5 l2,-16.5 l2,16.5 l1.5,-2.5 H80 H88 l1,-2 l1,2 H96 l1.5,2.5 l2,-16.5 l2,16.5 l1.5,-2.5 H120"/>
+          <linearGradient id="ecgtg" gradientUnits="userSpaceOnUse" x1="-45" y1="0" x2="0" y2="0">
+            <stop offset="0" stop-color="#ff9e4d" stop-opacity="0.15"/>
+            <stop offset="1" stop-color="#ff9e4d" stop-opacity="0.65"/>
+          </linearGradient>
+        </defs>
+        <path id="ecgtrail" fill="none" stroke="url(#ecgtg)" stroke-width="2" stroke-linecap="round"/>
+        <circle id="ecglead" r="1.1" fill="#ff7a1a" filter="url(#ecgglow)"/>
+      </svg>
+    </div>
     <div class="ptitle">SEG</div>
     <div class="mini" style="margin-top:0;">T-08 · T-16 · T-20<br>CAL OK · GRID SYNC</div>
     <div class="ptitle">A.T. FIELD<span>A-02</span></div>
@@ -859,6 +877,38 @@ function render(d){
   if(r2) r2.textContent=(worst*100).toFixed(1)+'%';
   var r3=document.getElementById('rail3');
   if(r3) r3.textContent=fmt(d.turns);
+  // ECG 心率：近 10 分钟活跃分钟数 -> BPM(40..140)，写入 window._ecgBpm 供彗星驱动
+  var hs=d.hitSeries||[];
+  var act=0;
+  for(var q=Math.max(0,hs.length-10); q<hs.length; q++){ if(hs[q]&&hs[q].rate!=null) act++; }
+  window._ecgBpm=Math.min(140, 40+act*10);
+  // ECG 彗星：亮核 + 连续余晖（rAF 驱动；一圈 480/BPM 秒）
+  (function(){
+    if(window._ecgComet) return; window._ecgComet=true;
+    var wave=document.getElementById('ecgpath');
+    var lead=document.getElementById('ecglead');
+    var trail=document.getElementById('ecgtrail');
+    var tg=document.getElementById('ecgtg');
+    if(!wave||!lead||!trail||!tg) return;
+    var L=wave.getTotalLength(), pts=[], last=0, t0=performance.now();
+    function frame(now){
+      var bpm=window._ecgBpm||90;
+      var dur=480/bpm*1000;
+      var dist=((now-t0)%dur)/dur*L;
+      if(dist<last){ pts=[]; }          // 折返清零：消除右端到左端的连线
+      last=dist;
+      var p=wave.getPointAtLength(dist);
+      lead.setAttribute('cx',p.x.toFixed(1)); lead.setAttribute('cy',p.y.toFixed(1));
+      pts.push(p);                       // 全程留痕：扫过即"打印"，形成心电波形
+      var dd='M'+pts[0].x.toFixed(1)+','+pts[0].y.toFixed(1);
+      for(var i=1;i<pts.length;i++){ dd+=' L'+pts[i].x.toFixed(1)+','+pts[i].y.toFixed(1); }
+      trail.setAttribute('d',dd);
+      tg.setAttribute('x1',pts[0].x.toFixed(1));
+      tg.setAttribute('x2',p.x.toFixed(1));
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
   // LEVEL METER：worst quota 垂直液位计（24 段）；最顶满格 = 当前水位，闪烁
   var lb=document.getElementById('lvlbar');
   if(lb){
