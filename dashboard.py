@@ -282,9 +282,13 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
 .hitline .ax{stroke:var(--hair); stroke-width:1; fill:none;}
 .hitline .rail-min{stroke:var(--linew); stroke-width:1;}
 .hitline .ring95{stroke:var(--command); stroke-width:1; stroke-dasharray:3,3; fill:none;}
-.hitline .rim{stroke:var(--linew); stroke-width:1.2; fill:none;}
+.hitline .rim{stroke:var(--linew); stroke-width:1.6; fill:none;}
+.hitline .rimdash{stroke:var(--linew); stroke-width:1; stroke-dasharray:3,3; fill:none; opacity:0.55;}
 .hitline .fill{fill:var(--command); stroke:none;}
-.hitline .ln{stroke:var(--command); stroke-width:1.5; fill:none;}
+.hitline .ln{stroke:var(--command); stroke-width:2; fill:none;}
+.hitline .low{stroke:var(--critical); stroke-width:3; fill:none; animation:lowblink 1s steps(2) infinite;}
+.hitline .lowdot{stroke:var(--critical); stroke-width:1.5; fill:none; animation:lowblink 1s steps(2) infinite;}
+@keyframes lowblink{0%,100%{opacity:1;} 50%{opacity:0;}}
 .hitline .dot{fill:var(--text);}
 .hitline .sweep{stroke:rgba(255,122,26,0.30); stroke-width:1;}
 .warn{color:var(--warning);} .bad{color:var(--critical);}
@@ -598,67 +602,95 @@ function render(d){
   var ns='http://www.w3.org/2000/svg';
   function mk(tag,attrs){var e=document.createElementNS(ns,tag); for(var k in attrs){e.setAttribute(k,attrs[k]);} svg.appendChild(e); return e;}
   function pt(i,r){var a=(-90+i*6)*Math.PI/180; return {x:cx+r*Math.cos(a), y:cy+r*Math.sin(a)};}
-  var rates=[], i, x;
-  for(i=0;i<s.length;i++){ if(s[i].rate!=null) rates.push(s[i].rate); }
-  var lo=0.9, hi=1.0;   // 无数据时的默认频段
-  if(rates.length){
-    lo=Math.min.apply(null,rates); hi=Math.max.apply(null,rates);
-    lo=Math.max(0,Math.floor((lo-0.05)*100)/100);
-    hi=Math.min(1,Math.ceil((hi+0.05)*100)/100);
-    if(hi-lo<0.02){ lo=Math.max(0,lo-0.01); hi=Math.min(1,hi+0.01); }
-    if(lo>0.95) lo=0.95;   // 95% 刻度必须落在量程内
-    if(hi<0.95) hi=0.95;
-  }
-  var span=(hi-lo)||1;
-  function R(g){return r0+(g-lo)/span*(r1-r0);}
+  var i, x;
+  // 固定参照系：内圈 r0=95%、外圈 r1=100%；低于 95% 的分钟按真实值向内潜
+  function R(g){var r=r0+(g-0.95)/0.05*(r1-r0); return Math.max(6, Math.min(r1, r));}
   function P(i,g){return pt(i,R(g));}
   svg.innerHTML='';
-  // 5% 步进参考环（95% 环虚线强调；顶端 g=hi 的环由外缘边界圆代替，避免重线）
-  for(var g=Math.ceil(lo*20-1e-9)/20; g<=hi+1e-9; g+=0.05){
-    g=Math.round(g*20)/20;
-    if(Math.abs(R(g)-r1)<0.5) continue;
-    mk('circle',{cx:cx,cy:cy,r:R(g).toFixed(1),'class':(Math.abs(g-0.95)<1e-9)?'ring95':'ax'});
-  }
-  // 右侧纵向比例尺（直径规）：与数据同一 value→radius 映射，上下两端对称刻度
+  // 径向渐变：填色在折线附近可见，至内圈 r0 衰减为透明（消除扇形向心直边）
+  var defs=mk('defs',{});
+  var grad=document.createElementNS(ns,'radialGradient');
+  grad.setAttribute('id','hgrad');
+  grad.setAttribute('gradientUnits','userSpaceOnUse');
+  grad.setAttribute('cx',cx); grad.setAttribute('cy',cy); grad.setAttribute('r',r1);
+  [['0','0'],[''+(r0/r1),'0'],['0.8','0.16'],['1','0.20']].forEach(function(sp){
+    var st=document.createElementNS(ns,'stop');
+    st.setAttribute('offset',sp[0]);
+    st.setAttribute('stop-color','#ff7a1a');
+    st.setAttribute('stop-opacity',sp[1]);
+    grad.appendChild(st);
+  });
+  defs.appendChild(grad);
+  // 参考环：95% 虚线内圈（基线）
+  mk('circle',{cx:cx,cy:cy,r:r0,'class':'ring95'});
+  // 右侧纵向比例尺（直径规）：内圈直径端点=95%、外圈直径端点=100%
   var sbx=cx+r1+60;
   mk('line',{'class':'ax',x1:sbx.toFixed(1),y1:(cy-r1).toFixed(1),x2:sbx.toFixed(1),y2:(cy+r1).toFixed(1)});
-  for(var g2=Math.ceil(lo*20-1e-9)/20; g2<=hi+1e-9; g2+=0.05){
-    g2=Math.round(g2*20)/20;
-    var rG=R(g2);
+  var rails=[[0.95,'95%'],[1.0,'100%']];
+  for(var ri=0;ri<rails.length;ri++){
+    var rG=R(rails[ri][0]);
     var ty=(cy-rG).toFixed(1), by=(cy+rG).toFixed(1);
     mk('line',{'class':'ax',x1:sbx.toFixed(1),y1:ty,x2:(sbx+6).toFixed(1),y2:ty});
     mk('line',{'class':'ax',x1:sbx.toFixed(1),y1:by,x2:(sbx+6).toFixed(1),y2:by});
-    var mkLb=(Math.abs(g2-0.95)<1e-9)?((R(hi)-R(0.95))>=8):(g2>=hi-1e-9);
-    if(mkLb){
-      var lb=Math.round(g2*100)+'%';
-      var st=mk('text',{x:(sbx+10).toFixed(1),y:(cy-rG+3).toFixed(1)}); st.textContent=lb;
-      var sb=mk('text',{x:(sbx+10).toFixed(1),y:(cy+rG+3).toFixed(1)}); sb.textContent=lb;
-    }
+    var st=mk('text',{x:(sbx+10).toFixed(1),y:(cy-rG+3).toFixed(1)}); st.textContent=rails[ri][1];
+    var sb=mk('text',{x:(sbx+10).toFixed(1),y:(cy+rG+3).toFixed(1)}); sb.textContent=rails[ri][1];
   }
   // 细分校准刻度（每 1%，3px 短tick）
-  for(var v1=Math.ceil(lo*100); v1<=Math.floor(hi*100)+1e-9; v1++){
-    if(v1%5===0) continue;
+  for(var v1=96; v1<100; v1++){
     var r1p=R(v1/100);
     var my1=(cy-r1p).toFixed(1), my2=(cy+r1p).toFixed(1);
     mk('line',{'class':'rail-min',x1:sbx.toFixed(1),y1:my1,x2:(sbx+3).toFixed(1),y2:my1});
     mk('line',{'class':'rail-min',x1:sbx.toFixed(1),y1:my2,x2:(sbx+3).toFixed(1),y2:my2});
   }
+  // 外缘：整圈虚线（数据顶点折线即实线，见下方 polyline）
+  mk('circle',{cx:cx,cy:cy,r:r1,'class':'rimdash'});
   // 分钟弧线：null 断弧；连续段加闭合面积填充（沿内圈 r0 闭合）
   var run=[], runStart=0, lastpt=null;
   function flush(){
     if(run.length>1){
-      var d='M '+run[0];
-      for(var j=1;j<run.length;j++){ d+=' L '+run[j]; }
+      var d='M '+run[0].p;
+      for(var j=1;j<run.length;j++){ d+=' L '+run[j].p; }
       var pe=pt(runStart+run.length-1,r0), pb=pt(runStart,r0);
       var large=((run.length-1)*6>180)?1:0;
       d+=' L '+pe.x.toFixed(1)+','+pe.y.toFixed(1);
       d+=' A '+r0+','+r0+' 0 '+large+' 0 '+pb.x.toFixed(1)+','+pb.y.toFixed(1);
       d+=' Z';
-      mk('path',{'class':'fill','fill-opacity':0.18,d:d});
-      mk('polyline',{'class':'ln',points:run.join(' ')});
+      mk('path',{d:d,fill:'url(#hgrad)',stroke:'none'});
+      mk('polyline',{'class':'ln',points:run.map(function(p){return p.p;}).join(' ')});
+      // 折线位于 95% 内圈里的部分：红色闪烁（按弦与圆的精确交点截断）
+      for(var j=0;j<run.length-1;j++){
+        var a=run[j], b=run[j+1];
+        var ax=a.p.split(','), bx=b.p.split(',');
+        var x1=+ax[0], y1=+ax[1], x2=+bx[0], y2=+bx[1];
+        var ra=Math.hypot(x1-cx,y1-cy), rb=Math.hypot(x2-cx,y2-cy);
+        if(ra>=r0 && rb>=r0) continue;
+        var ex=x2, ey=y2, sx=x1, sy=y1;
+        // 精确交点：|a+t(b-a)-c|^2 = r0^2 的小根
+        function crossT(){
+          var dx=x2-x1, dy=y2-y1, fx=x1-cx, fy=y1-cy;
+          var A=dx*dx+dy*dy, B=2*(dx*fx+dy*fy), C=fx*fx+fy*fy-r0*r0;
+          var disc=B*B-4*A*C;
+          if(disc<=0) return null;
+          var sq=Math.sqrt(disc);
+          var t1=(-B-sq)/(2*A), t2=(-B+sq)/(2*A);
+          if(t1>=0&&t1<=1) return t1;
+          if(t2>=0&&t2<=1) return t2;
+          return null;
+        }
+        var tc=crossT();
+        if(ra<r0 && rb>=r0){ // a 在内、b 在外：截到交点
+          if(tc==null) continue;
+          ex=x1+(x2-x1)*tc; ey=y1+(y2-y1)*tc;
+        } else if(ra>=r0 && rb<r0){ // b 在内、a 在外：从交点起
+          if(tc==null) continue;
+          sx=x1+(x2-x1)*tc; sy=y1+(y2-y1)*tc;
+        }
+        mk('line',{x1:sx.toFixed(1),y1:sy.toFixed(1),x2:ex.toFixed(1),y2:ey.toFixed(1),'class':'low'});
+      }
     }
     else if(run.length===1){
-      var p=run[0].split(','); mk('circle',{'class':'dot',cx:p[0],cy:p[1],r:2});
+      var p=run[0].p.split(','); mk('circle',{'class':'dot',cx:p[0],cy:p[1],r:2});
+      if(run[0].g<0.95){ mk('circle',{'class':'lowdot',cx:p[0],cy:p[1],r:3.5}); }
     }
     run=[];
   }
@@ -667,12 +699,10 @@ function render(d){
     if(x.rate==null){ flush(); continue; }
     if(run.length===0){ runStart=i; }
     lastpt=P(i,x.rate);
-    run.push(lastpt.x.toFixed(1)+','+lastpt.y.toFixed(1));
+    run.push({p:lastpt.x.toFixed(1)+','+lastpt.y.toFixed(1), g:x.rate});
   }
   flush();
   if(lastpt){ mk('circle',{'class':'dot',cx:lastpt.x.toFixed(1),cy:lastpt.y.toFixed(1),r:2.5}); }
-  // 外缘边界圆：最后绘制压在所有弧线之上，保证边界完整清晰
-  mk('circle',{cx:cx,cy:cy,r:r1,'class':'rim'});
   // 扫描线（SMIL 旋转，motion.md 批准的 scan sweep）
   var sw=mk('line',{'class':'sweep',x1:cx,y1:cy,x2:cx,y2:(cy-r1+6).toFixed(1)});
   var at=document.createElementNS(ns,'animateTransform');
