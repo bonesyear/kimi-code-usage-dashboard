@@ -271,7 +271,7 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
   border:1px solid var(--command); transform:translate(-50%,-50%);}
 .ch-dot::after{content:''; position:absolute; inset:2px; background:var(--command);}
 /* 缓存写马赛克块：对齐数字高度 */
-.mosaic{font-size:1em; line-height:1;}
+.mosaic{font-size:1em; line-height:1; display:inline-block; transform:scaleY(0.7);}
 .hitline{margin-top:16px; position:relative;}
 .dialtip{display:none; position:absolute; z-index:2; pointer-events:none; white-space:nowrap;
   background:var(--scope); border:1px solid var(--line); color:var(--text);
@@ -852,7 +852,7 @@ function render(d){
   var turns30=0;
   (d.days||[]).forEach(function(x){ turns30+=x.turns; });
   var t2=document.getElementById('rt2'); if(t2) t2.textContent=fmt(turns30);
-  var t3=document.getElementById('rt3'); if(t3){t3.textContent=fmt(td.cacheRead)+'/▓▓▓'; t3.title='Kimi 不上报缓存创建量，写侧以马赛克占位';}
+  var t3=document.getElementById('rt3'); if(t3){t3.innerHTML=fmt(td.cacheRead)+'/<span class="mosaic">▓▓▓</span>'; t3.title='Kimi 不上报缓存创建量，写侧以马赛克占位';}
   // A.T. FIELD 迷你状态：当前分钟命中率 + 今日 FIELD 状态字
   var hs=d.hitSeries||[], lastm=null;
   for(var k=hs.length-1;k>=0;k--){ if(hs[k].rate!=null){ lastm=hs[k]; break; } }
