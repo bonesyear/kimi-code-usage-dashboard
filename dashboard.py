@@ -104,6 +104,38 @@ body{background:var(--bg); color:var(--text);
 @keyframes curblink{0%,100%{opacity:1;} 50%{opacity:0.25;}}
 .lvlbar i.cur{animation:curblink 1s steps(2) infinite;}
 .tickcol i.cur{animation:curblink 1s steps(2) infinite;}
+/* A.T. FIELD = RadarPanel 复合仪：单外框 + 均一 2 格网格（发丝分隔），dial 以尺寸/位置为主角 */
+.noret::before,.noret::after{display:none;}
+.instrrow{display:grid; grid-template-columns:1.93fr 3.4fr; margin-top:14px; align-items:stretch;}
+.syncwrap{min-width:0; position:relative; padding:0 18px 0 30px;}
+.total .phead{align-items:center; flex-wrap:wrap; row-gap:4px;}
+.headval{margin-left:16px; text-align:right; line-height:1.25;}
+.headval .cap2{display:block; font-size:9px; color:var(--muted); letter-spacing:1px;}
+.headval .big3{display:block; font-family:Consolas,monospace; font-size:30px; color:var(--alert); font-weight:normal;}
+.headval .big3 small{font-size:12px; color:var(--muted);}
+.headval .sub3{display:block; font-size:9px; color:var(--muted); font-family:Consolas,monospace;}
+.synctitle{display:flex; align-items:baseline; gap:8px; margin-bottom:4px;}
+.synchead{position:absolute; top:0; left:0; right:18px; z-index:2; margin-bottom:0;}
+.synclabel2{font-family:"Bahnschrift",Consolas,monospace; font-size:9px; letter-spacing:2px;
+  color:var(--muted); text-transform:uppercase;}
+.syncnum{margin-left:auto; font-family:Consolas,monospace; font-size:12px; color:var(--alert); font-weight:normal;}
+.synclegend{position:absolute; left:30px; right:18px; bottom:6px; z-index:2;
+  display:flex; gap:16px; justify-content:center;
+  font-family:"Bahnschrift",Consolas,monospace; font-size:10px; letter-spacing:1px; color:var(--muted);}
+.synclegend .lg{display:inline-block; width:18px; height:2px; vertical-align:middle; margin-right:6px;}
+.synclegend .lg1{background:var(--command);}
+.synclegend .lg2{background:#f5b83d;}
+#syncsvg{position:absolute; top:7px; right:18px; bottom:0; left:30px; width:auto; height:auto; display:block;}
+.syncvgrid line{stroke:#9b4b31; stroke-width:0.6; opacity:0.35;}
+.syncbase{stroke:var(--line); stroke-width:1;}
+.syncticks line{stroke:var(--linew); stroke-width:1; opacity:0.8;}
+.syncticks text{font-family:Consolas,monospace; font-size:12px; fill:var(--muted);}
+.syncwave{fill:none;}
+#syncwave1{stroke:var(--command); stroke-width:2;}
+#syncwave2{stroke:#f5b83d; stroke-width:2; opacity:0.9;}
+.dialunit{min-width:0; display:flex; flex-direction:column; justify-content:center; padding-left:20px;}
+.dialunit .hitline{flex:none; margin-top:0;}
+@media (max-width:1200px){.instrrow{grid-template-columns:1fr;} .syncwrap{display:none;} .dialunit{padding-left:0;}}
 /* StripeBand 16px 节拍 */
 .hz{height:10px; margin:14px 0;
   background:repeating-linear-gradient(-60deg, rgba(255,122,26,0.9) 0 6px, rgba(255,122,26,0.12) 6px 10px, transparent 10px 16px);}
@@ -258,8 +290,8 @@ th{color:var(--muted); font-weight:normal; font-size:11px; letter-spacing:0.12em
 table.titleblock{width:100%; border-collapse:collapse; font-size:12px;}
 table.titleblock td{border-top:1px solid var(--line); padding:4px 12px; text-align:left;}
 table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:2px;}
-/* 表盘：A.T. FIELD scope */
-.scope-frame{position:relative; width:360px; max-width:100%; margin:0 auto; padding:10px 0;}
+/* 表盘：A.T. FIELD scope（含底部题注行，括线框包住整格；1.2x 比例放大） */
+.scope-frame{position:relative; width:432px; max-width:100%; margin:0 auto; padding:12px 0 20px;}
 .bk{position:absolute; width:18px; height:18px; border-top:2px solid rgba(255,122,26,0.65); border-left:2px solid rgba(255,122,26,0.65);}
 .bk.tl{top:0; left:0;} .bk.tr{top:0; right:0; transform:rotate(90deg);}
 .bk.bl{bottom:0; left:0; transform:rotate(-90deg);} .bk.br{bottom:0; right:0; transform:rotate(180deg);}
@@ -278,7 +310,9 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
   background:var(--scope); border:1px solid var(--line); color:var(--text);
   font-family:Consolas,monospace; font-size:11px; padding:2px 8px;}
 .hitline .hovermark{fill:var(--text);}
-.hitline svg{width:360px; max-width:100%; height:300px; display:block; margin:0 auto;}
+.hitline svg{width:432px; max-width:100%; height:360px; display:block; margin:0 auto;}
+.hitline .dialcap-x{width:396px; max-width:100%; margin:6px auto 0;}
+.hitline .dialcap-x .cap{font-size:9px; letter-spacing:1px; text-transform:uppercase;}
 .hitline text{font-family:Consolas,monospace; font-size:10px; fill:var(--muted);}
 .hitline .ax{stroke:var(--hair); stroke-width:1; fill:none;}
 .hitline .rail-min{stroke:var(--linew); stroke-width:1;}
@@ -442,18 +476,50 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
     </div>
 
     <section class="total">
-      <div class="frame dots pad panel" style="animation-delay:.15s;">
-        <div class="phead"><h2>A.T. FIELD · 缓存命中率<span class="en">hit-rate</span></h2><span class="ref">REF K2-0923-03</span><span class="coord">E-06 · N-10</span><span class="chip" id="chiph">--</span></div>
-        <div class="row"><span class="cap">总 计 · 缓存命中率（全量）</span><span class="big num"><span id="hit">--</span><small> %</small></span></div>
-        <div class="sub"><span>缓存命中 / 全部输入</span><span class="num" id="hitsub">--</span></div>
-        <div class="hitline">
-          <div class="scope-frame">
-            <i class="bk tl"></i><i class="bk tr"></i><i class="bk bl"></i><i class="bk br"></i>
-            <svg id="hsvg" viewBox="0 0 360 300"></svg>
-          </div>
-          <div class="xaxis"><span id="hstart">--</span><span>近 60 分钟 · 每分钟命中率</span><span id="hend">--</span></div>
+      <div class="frame dots pad panel noret" style="animation-delay:.15s;">
+        <div class="phead"><h2>A.T. FIELD · 缓存命中率<span class="en">hit-rate</span></h2><span class="ref">REF K2-0923-03</span><span class="coord">E-06 · N-10</span><span class="chip" id="chiph">--</span>
+          <span class="headval"><span class="cap2">总 计 · 缓存命中率（全量）</span><b class="big3 num"><span id="hit">--</span><small> %</small></b><span class="sub3 num" id="hitsub">--</span></span>
         </div>
-        <div class="mini">SAMPLING 60S · BUCKET 1MIN · NULL=NO DATA · BASELINE 95% · RAIL CAL-1%</div>
+        <div class="instrrow">
+        <div class="syncwrap">
+          <div class="synctitle synchead"><span class="synclabel2">SYNC RATE · 同步率</span><b class="num syncnum" id="syncnum">--</b></div>
+            <svg id="syncsvg" viewBox="0 0 506 700" preserveAspectRatio="none" aria-hidden="true">
+              <g class="syncvgrid">
+                <line x1="46" y1="0" x2="46" y2="700"/><line x1="92" y1="0" x2="92" y2="700"/>
+                <line x1="138" y1="0" x2="138" y2="700"/><line x1="184" y1="0" x2="184" y2="700"/>
+                <line x1="230" y1="0" x2="230" y2="700"/><line x1="276" y1="0" x2="276" y2="700"/>
+                <line x1="322" y1="0" x2="322" y2="700"/><line x1="368" y1="0" x2="368" y2="700"/>
+                <line x1="414" y1="0" x2="414" y2="700"/><line x1="460" y1="0" x2="460" y2="700"/>
+              </g>
+              <line x1="0" y1="310" x2="506" y2="310" class="syncbase"/>
+              <g class="syncticks">
+                <line x1="0" y1="60" x2="8" y2="60"/><text x="11" y="63">100</text>
+                <line x1="0" y1="140" x2="8" y2="140"/><text x="11" y="143">75</text>
+                <line x1="0" y1="220" x2="8" y2="220"/><text x="11" y="223">50</text>
+                <line x1="0" y1="300" x2="8" y2="300"/><text x="11" y="303">25</text>
+                <line x1="0" y1="380" x2="8" y2="380"/>
+                <line x1="0" y1="460" x2="8" y2="460"/>
+                <line x1="0" y1="540" x2="8" y2="540"/>
+                <line x1="0" y1="620" x2="8" y2="620"/>
+              </g>
+              <polyline id="syncwave1" class="syncwave" points=""/>
+              <polyline id="syncwave2" class="syncwave" points=""/>
+            </svg>
+            <div class="synclegend">
+              <span><i class="lg lg1"></i>驾驶员自我意识</span>
+              <span><i class="lg lg2"></i>EVA機体自我意识</span>
+            </div>
+        </div>
+        <div class="dialunit">
+            <div class="hitline">
+              <div class="scope-frame">
+                <i class="bk tl"></i><i class="bk tr"></i><i class="bk bl"></i><i class="bk br"></i>
+                <svg id="hsvg" viewBox="0 0 360 300"></svg>
+                <div class="xaxis dialcap-x"><span id="hstart">--</span><span class="cap">SAMPLING 60S · BUCKET 1MIN · BASELINE 95%</span><span id="hend">--</span></div>
+              </div>
+            </div>
+        </div>
+        </div>
       </div>
     </section>
 
@@ -555,6 +621,42 @@ function flapSchedule(){
 
 /* 重置倒计时：时间戳存这里，render 时刷新，1s ticker 只读（不与 60s 轮询争抢） */
 var CD={q5:null,q7:null,qm:null};
+/* SYNC RATE 示波器：同步率=两波重叠度；A=参考脑波(初号機)，B=EVA频率(零号機)；
+   偏差 dev = pow((1-rate)/0.10, 0.8) -> 相位 0..0.9rad + 振幅差 0..35% + 水平漂移 */
+var SYNC={rate:0.95, dev:0, raf:null};
+function syncDev(r){
+  if(r==null || r>=1.0) return 0;
+  if(r<=0.90) return 1;
+  return Math.pow((1-r)/0.10, 0.8);
+}
+function syncDraw(){
+  if(!document.getElementById('syncsvg')){ SYNC.raf=null; return; }
+  var w1=document.getElementById('syncwave1'), w2=document.getElementById('syncwave2');
+  var W=506, mid=310, n=110, A=200;
+  var t=(typeof performance!=='undefined'&&performance.now?performance.now():Date.now())/1000;
+  var dev=SYNC.dev;
+  var wob=1+0.12*Math.sin(t*0.7);
+  var p1=[], p2=[];
+  for(var i=0;i<=n;i++){
+    var x=i/n*W;
+    var ph=(x/W)*Math.PI*4 - t*2.4;
+    var nz=0.03*Math.sin(t*3.1+i*0.9);
+    var ampB=A*(1+0.35*dev);
+    p1.push(x.toFixed(1)+','+(mid-Math.sin(ph)*(A+nz*40)*wob).toFixed(1));
+    p2.push(x.toFixed(1)+','+(mid-Math.sin(ph+dev*0.9+x*0.05*dev)*(ampB+nz*40)*wob).toFixed(1));
+  }
+  if(w1) w1.setAttribute('points', p1.join(' '));
+  if(w2) w2.setAttribute('points', p2.join(' '));
+  SYNC.raf=requestAnimationFrame(syncDraw);
+}
+function syncStart(){ if(!SYNC.raf && document.getElementById('syncsvg')) SYNC.raf=requestAnimationFrame(syncDraw); }
+function syncSetRate(r){
+  SYNC.rate=(r==null)?null:r;
+  SYNC.dev=syncDev(r);
+  var sn=document.getElementById('syncnum');
+  if(sn) sn.textContent=(r==null?'--':('MIN '+(r*100).toFixed(1)+'%'))+' · DEV '+Math.round(SYNC.dev*100)+'%';
+  syncStart();
+}
 /* 动画重触发守卫：值没变就不重播（steps 机器节拍） */
 var ANIM={};
 function animKey(n,k){ if(ANIM[n]===k) return false; ANIM[n]=k; return true; }
@@ -612,6 +714,10 @@ function render(d){
   document.getElementById('hit').textContent = t.hitRate==null?'--':(t.hitRate*100).toFixed(1);
   document.getElementById('hitsub').textContent =
     (t.hitRate==null?'--':fmt(t.cacheRead))+' / '+fmt((t.cacheRead||0)+(t.cacheCreate||0)+(t.input||0));
+  // SYNC RATE：优先 hitSeries 最近非空分钟，退回今日命中率
+  var hs2=d.hitSeries||[], lr=null;
+  for(var k2=hs2.length-1;k2>=0;k2--){ if(hs2[k2]&&hs2[k2].rate!=null){ lr=hs2[k2].rate; break; } }
+  syncSetRate(lr!=null?lr:t.hitRate);
   });
   sect('hitline',function(){
   var svg=document.getElementById('hsvg');
@@ -619,7 +725,7 @@ function render(d){
   var cx=150, cy=150, r1=104, r0=Math.round(r1*0.35);
   var ns='http://www.w3.org/2000/svg';
   function mk(tag,attrs){var e=document.createElementNS(ns,tag); for(var k in attrs){e.setAttribute(k,attrs[k]);} svg.appendChild(e); return e;}
-  function pt(i,r){var a=(-90+i*6)*Math.PI/180; return {x:cx+r*Math.cos(a), y:cy+r*Math.sin(a)};}
+  function pt(i,r){var a=(-90+(s.length-1-i)*6)*Math.PI/180; return {x:cx+r*Math.cos(a), y:cy+r*Math.sin(a)};}
   var i, x;
   // 固定参照系：内圈 r0=95%、外圈 r1=100%；低于 95% 的分钟按真实值向内潜
   function R(g){var r=r0+(g-0.95)/0.05*(r1-r0); return Math.max(6, Math.min(r1, r));}
@@ -745,7 +851,7 @@ function render(d){
     var rb=svg.getBoundingClientRect();
     var mx=(e.clientX-rb.left)*360/rb.width, my=(e.clientY-rb.top)*300/rb.height;
     var deg=Math.atan2(my-cy, mx-cx)*180/Math.PI;
-    var mi=Math.round((deg+90)/6); mi=((mi%60)+60)%60;
+    var mi=s.length-1-Math.round((deg+90)/6); mi=((mi%60)+60)%60;
     var it=s[mi]; if(!it) return;
     if(!tip){
       tip=document.createElement('div'); tip.id='dialtip'; tip.className='dialtip';
@@ -761,7 +867,7 @@ function render(d){
       mark.setAttribute('class','hovermark'); mark.setAttribute('r',3);
       svg.appendChild(mark);
     }
-    var q=(it.rate==null)?P(mi,Math.max(lo,Math.min(hi,0.95))):P(mi,it.rate);
+    var q=(it.rate==null)?P(mi,0.95):P(mi,it.rate);
     mark.setAttribute('cx',q.x.toFixed(1));
     mark.setAttribute('cy',q.y.toFixed(1));
   };
