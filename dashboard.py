@@ -29,7 +29,6 @@ CLOUD_URL = ("https://www.kimi.com/apiv2/"
 JWT_RE = re.compile(rb"access_token[\x00-\x20]*.{0,10}?(eyJ[A-Za-z0-9_\-\.]{100,})")
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard_cache.json")
 USAGE_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usage_cache.json")
-LOGO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kimi-logo.png")
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 CLOUD_TIMEOUT = 12
 USAGE_LOCK = threading.Lock()
@@ -106,7 +105,7 @@ body{background:var(--bg); color:var(--text);
 .tickcol i.cur{animation:curblink 1s steps(2) infinite;}
 /* A.T. FIELD = RadarPanel 复合仪：单外框 + 均一 2 格网格（发丝分隔），dial 以尺寸/位置为主角 */
 .noret::before,.noret::after{display:none;}
-.instrrow{display:grid; grid-template-columns:1.93fr 3.4fr; margin-top:14px; align-items:stretch;}
+.instrrow{display:grid; grid-template-columns:1.2fr 1fr; margin-top:14px; align-items:stretch;}
 .syncwrap{min-width:0; position:relative; padding:0 18px 0 30px;}
 .total .phead{align-items:center; flex-wrap:wrap; row-gap:4px;}
 .headval{margin-left:16px; text-align:right; line-height:1.25;}
@@ -119,17 +118,18 @@ body{background:var(--bg); color:var(--text);
 .synclabel2{font-family:"Bahnschrift",Consolas,monospace; font-size:9px; letter-spacing:2px;
   color:var(--muted); text-transform:uppercase;}
 .syncnum{margin-left:auto; font-family:Consolas,monospace; font-size:12px; color:var(--alert); font-weight:normal;}
-.synclegend{position:absolute; left:30px; right:18px; bottom:6px; z-index:2;
+.synclegend{position:absolute; left:30px; right:18px; top:56%; z-index:2;
   display:flex; gap:16px; justify-content:center;
   font-family:"Bahnschrift",Consolas,monospace; font-size:10px; letter-spacing:1px; color:var(--muted);}
 .synclegend .lg{display:inline-block; width:18px; height:2px; vertical-align:middle; margin-right:6px;}
 .synclegend .lg1{background:var(--command);}
 .synclegend .lg2{background:#f5b83d;}
-#syncsvg{position:absolute; top:7px; right:18px; bottom:0; left:30px; width:auto; height:auto; display:block;}
+#syncsvg{position:absolute; top:7px; right:18px; bottom:0; left:30px; width:calc(100% - 48px); height:calc(100% - 7px); display:block;}
 .syncvgrid line{stroke:#9b4b31; stroke-width:0.6; opacity:0.35;}
 .syncbase{stroke:var(--line); stroke-width:1;}
 .syncticks line{stroke:var(--linew); stroke-width:1; opacity:0.8;}
-.syncticks text{font-family:Consolas,monospace; font-size:12px; fill:var(--muted);}
+.syncaxis{position:absolute; top:7px; bottom:0; left:30px; width:42px; pointer-events:none; z-index:2;}
+.syncaxis span{position:absolute; left:3px; transform:translateY(-50%); font-family:Consolas,monospace; font-size:12px; color:var(--muted);}
 .syncwave{fill:none;}
 #syncwave1{stroke:var(--command); stroke-width:2;}
 #syncwave2{stroke:#f5b83d; stroke-width:2; opacity:0.9;}
@@ -146,8 +146,8 @@ body{background:var(--bg); color:var(--text);
 .b-right{text-align:right;}
 .eyebrow{color:var(--muted); text-transform:uppercase; letter-spacing:0.12em; font-size:0.72rem; font-family:"Bahnschrift",Consolas,monospace;}
 .head h1{margin:4px 0 2px; color:var(--command); font-size:clamp(1.6rem,3vw,2.2rem); line-height:1.1; letter-spacing:4px; font-weight:700;
-  font-family:"SourceHanSerifSC EvaJian","Yu Mincho","YuMincho","MS Mincho",serif; text-transform:uppercase;}
-.mincho{font-family:"SourceHanSerifSC EvaJian","Yu Mincho","YuMincho","MS Mincho",serif; font-weight:700; font-size:24px; letter-spacing:10px; color:var(--text);}
+  font-family:"EvaJian","SourceHanSerifSC EvaJian","Yu Mincho","YuMincho","MS Mincho",serif; text-transform:uppercase;}
+.mincho{font-family:"EvaJian","SourceHanSerifSC EvaJian","Yu Mincho","YuMincho","MS Mincho",serif; font-weight:700; font-size:24px; letter-spacing:10px; color:var(--text);}
 .head .sub{font-family:"Bahnschrift",Consolas,monospace; font-size:10px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; margin-top:4px;}
 .head .who{font-family:"Bahnschrift",Consolas,monospace; font-size:12px; color:var(--text); letter-spacing:1px; margin-top:4px;}
 .clock{font-size:20px; letter-spacing:2px; color:var(--alert);}
@@ -202,7 +202,6 @@ h2 .en{color:var(--muted); font-weight:normal; font-size:11px; letter-spacing:0.
 .ptitle:first-child{margin-top:0;}
 .chev{height:84px; border:1px solid var(--line); margin-bottom:4px;
   background:repeating-linear-gradient(135deg, transparent 0 8px, rgba(255,159,67,0.5) 8px 12px, transparent 12px 22px);}
-.m .m{display:block;}
 .modes span{display:block; border:1px solid var(--line); color:var(--muted); font-size:10px; letter-spacing:2px; padding:2px 8px; margin-bottom:4px;
   animation:modeact 9s steps(1) infinite;}
 .modes span:nth-child(1){animation-delay:0s;}
@@ -491,12 +490,12 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
                 <line x1="322" y1="0" x2="322" y2="700"/><line x1="368" y1="0" x2="368" y2="700"/>
                 <line x1="414" y1="0" x2="414" y2="700"/><line x1="460" y1="0" x2="460" y2="700"/>
               </g>
-              <line x1="0" y1="310" x2="506" y2="310" class="syncbase"/>
+              <line x1="42" y1="220" x2="506" y2="220" class="syncbase"/>
               <g class="syncticks">
-                <line x1="0" y1="60" x2="8" y2="60"/><text x="11" y="63">100</text>
-                <line x1="0" y1="140" x2="8" y2="140"/><text x="11" y="143">75</text>
-                <line x1="0" y1="220" x2="8" y2="220"/><text x="11" y="223">50</text>
-                <line x1="0" y1="300" x2="8" y2="300"/><text x="11" y="303">25</text>
+                <line x1="0" y1="60" x2="8" y2="60"/>
+                <line x1="0" y1="140" x2="8" y2="140"/>
+                <line x1="0" y1="220" x2="8" y2="220"/>
+                <line x1="0" y1="300" x2="8" y2="300"/>
                 <line x1="0" y1="380" x2="8" y2="380"/>
                 <line x1="0" y1="460" x2="8" y2="460"/>
                 <line x1="0" y1="540" x2="8" y2="540"/>
@@ -505,6 +504,12 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
               <polyline id="syncwave1" class="syncwave" points=""/>
               <polyline id="syncwave2" class="syncwave" points=""/>
             </svg>
+            <div class="syncaxis" aria-hidden="true">
+              <span style="top:8.571%;">100</span>
+              <span style="top:20%;">75</span>
+              <span style="top:31.429%;">50</span>
+              <span style="top:42.857%;">25</span>
+            </div>
             <div class="synclegend">
               <span><i class="lg lg1"></i>驾驶员自我意识</span>
               <span><i class="lg lg2"></i>EVA機体自我意识</span>
@@ -568,6 +573,7 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
 <script>
 function fmt(n){return (n==null||isNaN(n))?'--':n.toLocaleString('en-US');}
 function pct(x,d){return x==null?'--':(x*100).toFixed(d==null?1:d)+'%';}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function cls(r){return r>=0.85?'bad':(r>=0.6?'warn':'');}
 function ruler(el,r,anim){
   el.className='tickruler '+cls(r)+(anim?' anim':'');
@@ -623,7 +629,7 @@ function flapSchedule(){
 var CD={q5:null,q7:null,qm:null};
 /* SYNC RATE 示波器：同步率=两波重叠度；A=参考脑波(初号機)，B=EVA频率(零号機)；
    偏差 dev = pow((1-rate)/0.10, 0.8) -> 相位 0..0.9rad + 振幅差 0..35% + 水平漂移 */
-var SYNC={rate:0.95, dev:0, raf:null};
+var SYNC={dev:0, raf:null};
 function syncDev(r){
   if(r==null || r>=1.0) return 0;
   if(r<=0.90) return 1;
@@ -632,13 +638,13 @@ function syncDev(r){
 function syncDraw(){
   if(!document.getElementById('syncsvg')){ SYNC.raf=null; return; }
   var w1=document.getElementById('syncwave1'), w2=document.getElementById('syncwave2');
-  var W=506, mid=310, n=110, A=200;
+  var W=506, mid=220, n=110, A=100, X0=42;
   var t=(typeof performance!=='undefined'&&performance.now?performance.now():Date.now())/1000;
   var dev=SYNC.dev;
   var wob=1+0.12*Math.sin(t*0.7);
   var p1=[], p2=[];
   for(var i=0;i<=n;i++){
-    var x=i/n*W;
+    var x=X0+i/n*(W-X0);
     var ph=(x/W)*Math.PI*4 - t*2.4;
     var nz=0.03*Math.sin(t*3.1+i*0.9);
     var ampB=A*(1+0.35*dev);
@@ -651,7 +657,6 @@ function syncDraw(){
 }
 function syncStart(){ if(!SYNC.raf && document.getElementById('syncsvg')) SYNC.raf=requestAnimationFrame(syncDraw); }
 function syncSetRate(r){
-  SYNC.rate=(r==null)?null:r;
   SYNC.dev=syncDev(r);
   var sn=document.getElementById('syncnum');
   if(sn) sn.textContent=(r==null?'--':('MIN '+(r*100).toFixed(1)+'%'))+' · DEV '+Math.round(SYNC.dev*100)+'%';
@@ -1055,7 +1060,7 @@ function render(d){
   ws.forEach(function(w,i){
     var tr=document.createElement('tr');
     var h=(w.hitRate==null?'--':(w.hitRate*100).toFixed(1)+'%');
-    tr.innerHTML='<td class="num">'+(i+1)+'</td><td>'+w.name+'</td><td class="r">'+fmt(w.tokens)+'</td><td class="r">'+fmt(w.turns)+'</td><td class="r">'+h+'</td>';
+    tr.innerHTML='<td class="num">'+(i+1)+'</td><td>'+esc(w.name)+'</td><td class="r">'+fmt(w.tokens)+'</td><td class="r">'+fmt(w.turns)+'</td><td class="r">'+h+'</td>';
     wb.appendChild(tr);
   });
   if(ws.length===0){var tr=document.createElement('tr'); tr.innerHTML='<td colspan="5" class="label">近 30 天无记录</td>'; wb.appendChild(tr);}
@@ -1314,7 +1319,8 @@ def read_tokens():
     """候选云端 JWT：daimon config.json 全量扫描 + leveldb 日志正则"""
     candidates = []
     try:
-        cfg = json.load(open(DAIMON_CFG, encoding="utf-8"))
+        with open(DAIMON_CFG, encoding="utf-8") as f:
+            cfg = json.load(f)
 
         def walk(o):
             if isinstance(o, str) and o.startswith("eyJ"):
@@ -1362,17 +1368,20 @@ def fetch_monthly():
                       "expireLocal": iso_local(bal.get("expireTime") or ""),
                       "cached": False, "fetchedAt": local_dt().strftime("%H:%M")}
             try:
-                with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                tmp = CACHE_FILE + ".tmp"
+                with open(tmp, "w", encoding="utf-8") as f:
                     json.dump({"used": result["used"],
                                "expire": bal.get("expireTime") or "",
                                "fetched_at": time.time()}, f)
+                os.replace(tmp, CACHE_FILE)
             except OSError:
                 pass
             return result
         except Exception:
             continue
     try:
-        c = json.load(open(CACHE_FILE, encoding="utf-8"))
+        with open(CACHE_FILE, encoding="utf-8") as f:
+            c = json.load(f)
         if c.get("used") is not None:
             return {"used": float(c["used"]),
                     "expire": c.get("expire") or "",
@@ -1480,16 +1489,6 @@ class Handler(BaseHTTPRequestHandler):
             body = json.dumps(compute(), ensure_ascii=False).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
-        elif self.path == "/logo.png":
-            try:
-                with open(LOGO_FILE, "rb") as f:
-                    body = f.read()
-                self.send_response(200)
-                self.send_header("Content-Type", "image/png")
-            except OSError:
-                body = b"not found"
-                self.send_response(404)
-                self.send_header("Content-Type", "text/plain; charset=utf-8")
         elif self.path.startswith("/kimi-") and self.path.endswith(".png"):
             try:
                 with open(os.path.join(APP_DIR, os.path.basename(self.path)), "rb") as f:
