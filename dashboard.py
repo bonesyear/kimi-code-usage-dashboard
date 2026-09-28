@@ -490,27 +490,27 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
                 <line x1="322" y1="0" x2="322" y2="700"/><line x1="368" y1="0" x2="368" y2="700"/>
                 <line x1="414" y1="0" x2="414" y2="700"/><line x1="460" y1="0" x2="460" y2="700"/>
               </g>
-              <line x1="42" y1="220" x2="506" y2="220" class="syncbase"/>
+              <line id="syncbase" x1="42" y1="316" x2="506" y2="316" class="syncbase"/>
               <g class="syncticks">
-                <line x1="0" y1="60" x2="8" y2="60"/>
-                <line x1="0" y1="140" x2="8" y2="140"/>
-                <line x1="0" y1="220" x2="8" y2="220"/>
-                <line x1="0" y1="300" x2="8" y2="300"/>
-                <line x1="0" y1="380" x2="8" y2="380"/>
-                <line x1="0" y1="460" x2="8" y2="460"/>
-                <line x1="0" y1="540" x2="8" y2="540"/>
-                <line x1="0" y1="620" x2="8" y2="620"/>
+                <line x1="0" y1="116" x2="8" y2="116"/>
+                <line x1="0" y1="196" x2="8" y2="196"/>
+                <line x1="0" y1="236" x2="8" y2="236"/>
+                <line x1="0" y1="276" x2="8" y2="276"/>
+                <line x1="0" y1="316" x2="8" y2="316"/>
+                <line x1="0" y1="356" x2="8" y2="356"/>
+                <line x1="0" y1="396" x2="8" y2="396"/>
+                <line x1="0" y1="476" x2="8" y2="476"/>
               </g>
               <polyline id="syncwave1" class="syncwave" points=""/>
               <polyline id="syncwave2" class="syncwave" points=""/>
             </svg>
             <div class="syncaxis" aria-hidden="true">
-              <span style="top:8.571%;">100</span>
-              <span style="top:20%;">75</span>
-              <span style="top:31.429%;">50</span>
-              <span style="top:42.857%;">25</span>
+              <span style="top:16.571%;">100</span>
+              <span style="top:30.857%;">75</span>
+              <span style="top:45.143%;">50</span>
+              <span style="top:59.429%;">25</span>
             </div>
-            <div class="synclegend">
+            <div class="synclegend" id="synclegend">
               <span><i class="lg lg1"></i>驾驶员自我意识</span>
               <span><i class="lg lg2"></i>EVA機体自我意识</span>
             </div>
@@ -629,16 +629,50 @@ function flapSchedule(){
 var CD={q5:null,q7:null,qm:null};
 /* SYNC RATE 示波器：同步率=两波重叠度；A=参考脑波(初号機)，B=EVA频率(零号機)；
    偏差 dev = pow((1-rate)/0.10, 0.8) -> 相位 0..0.9rad + 振幅差 0..35% + 水平漂移 */
-var SYNC={dev:0, raf:null};
+var SYNC={dev:0, raf:null, mid:316, A:100};
 function syncDev(r){
   if(r==null || r>=1.0) return 0;
   if(r<=0.90) return 1;
   return Math.pow((1-r)/0.10, 0.8);
 }
+/* 动态对齐：每轮渲染实测两 svg 的屏幕几何，使基线 screenY == dial 圆心 screenY
+   （dial viewBox cy=150/300=50%）。刻度/轴标签/图例全部由 SYNC.mid 单源派生，
+   布局任何变化（高度/宽度/字号）后自动保持对齐。
+   刻度标度：sync% = 50 + (mid - y)/k，k=A/25（A ↔ ±25 常规振幅）。
+   基线=50；常态波峰≈75、波谷≈25；dev=1 时 ~88/12 逼近 100/0 边缘。 */
+function syncAlign(){
+  var hs=document.getElementById('hsvg'), ss=document.getElementById('syncsvg');
+  if(!hs||!ss) return;
+  var hr=hs.getBoundingClientRect(), sr=ss.getBoundingClientRect();
+  if(!hr.height||!sr.height) return;
+  var sy=sr.height/700, swH=sr.height+7;
+  SYNC.mid=(hr.top+hr.height*0.5-sr.top)/sy;
+  var m=SYNC.mid.toFixed(1);
+  var sb=document.getElementById('syncbase');
+  if(sb){ sb.setAttribute('y1',m); sb.setAttribute('y2',m); }
+  var k=SYNC.A/25;
+  var offs=[-50*k,-37.5*k,-25*k,-12.5*k,0,12.5*k,25*k,37.5*k];
+  var tk=document.querySelectorAll('.syncticks line');
+  for(var i=0;i<tk.length&&i<offs.length;i++){
+    var v=Math.max(6,Math.min(694,SYNC.mid+offs[i])).toFixed(1);
+    tk[i].setAttribute('y1',v); tk[i].setAttribute('y2',v);
+  }
+  var ax=document.querySelectorAll('.syncaxis span');
+  var labOffs=[-50*k,-25*k,0,25*k];
+  for(var j=0;j<ax.length&&j<labOffs.length;j++){
+    ax[j].style.top=((SYNC.mid+labOffs[j])/7).toFixed(3)+'%';
+  }
+  var lg=document.getElementById('synclegend');
+  if(lg){
+    var worst=(SYNC.mid+SYNC.A*1.35*1.12)*sy+20+7;
+    lg.style.top=Math.min(worst,swH-24)+'px';
+  }
+}
+window.addEventListener('resize',syncAlign);
 function syncDraw(){
   if(!document.getElementById('syncsvg')){ SYNC.raf=null; return; }
   var w1=document.getElementById('syncwave1'), w2=document.getElementById('syncwave2');
-  var W=506, mid=220, n=110, A=100, X0=42;
+  var W=506, n=110, X0=42, mid=SYNC.mid, A=SYNC.A;
   var t=(typeof performance!=='undefined'&&performance.now?performance.now():Date.now())/1000;
   var dev=SYNC.dev;
   var wob=1+0.12*Math.sin(t*0.7);
@@ -660,6 +694,7 @@ function syncSetRate(r){
   SYNC.dev=syncDev(r);
   var sn=document.getElementById('syncnum');
   if(sn) sn.textContent=(r==null?'--':('MIN '+(r*100).toFixed(1)+'%'))+' · DEV '+Math.round(SYNC.dev*100)+'%';
+  syncAlign();
   syncStart();
 }
 /* 动画重触发守卫：值没变就不重播（steps 机器节拍） */
