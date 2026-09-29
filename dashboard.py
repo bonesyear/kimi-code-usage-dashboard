@@ -118,21 +118,36 @@ body{background:var(--bg); color:var(--text);
 .synclabel2{font-family:"Bahnschrift",Consolas,monospace; font-size:9px; letter-spacing:2px;
   color:var(--muted); text-transform:uppercase;}
 .syncnum{margin-left:auto; font-family:Consolas,monospace; font-size:12px; color:var(--alert); font-weight:normal;}
-.synclegend{position:absolute; left:30px; right:18px; top:56%; z-index:2;
-  display:flex; gap:16px; justify-content:center;
-  font-family:"Bahnschrift",Consolas,monospace; font-size:10px; letter-spacing:1px; color:var(--muted);}
-.synclegend .lg{display:inline-block; width:18px; height:2px; vertical-align:middle; margin-right:6px;}
-.synclegend .lg1{background:var(--command);}
-.synclegend .lg2{background:#f5b83d;}
-#syncsvg{position:absolute; top:7px; right:18px; bottom:0; left:30px; width:calc(100% - 48px); height:calc(100% - 7px); display:block;}
+#syncsvg,#synccv{position:absolute; top:7px; right:18px; bottom:0; left:30px; width:calc(100% - 48px); height:calc(100% - 7px); display:block;}
 .syncvgrid line{stroke:#9b4b31; stroke-width:0.6; opacity:0.35;}
 .syncbase{stroke:var(--line); stroke-width:1;}
 .syncticks line{stroke:var(--linew); stroke-width:1; opacity:0.8;}
-.syncaxis{position:absolute; top:7px; bottom:0; left:30px; width:42px; pointer-events:none; z-index:2;}
-.syncaxis span{position:absolute; left:3px; transform:translateY(-50%); font-family:Consolas,monospace; font-size:12px; color:var(--muted);}
 .syncwave{fill:none;}
-#syncwave1{stroke:var(--command); stroke-width:2;}
-#syncwave2{stroke:#f5b83d; stroke-width:2; opacity:0.9;}
+.dw1{stroke:var(--command); stroke-width:2;}
+.dw2{stroke:#f5b83d; stroke-width:2; opacity:0.9;}
+/* 模式切换 chip（MAT=织带 / DUAL=双线），状态=激活高亮 */
+.swmode{display:flex; gap:4px; margin-left:12px;}
+.swmode b{font-family:"Bahnschrift",Consolas,monospace; font-size:9px; letter-spacing:2px; font-weight:normal;
+  color:var(--muted); border:1px solid var(--line); padding:0 6px; cursor:pointer;}
+.swmode b:hover{color:var(--text);}
+.swmode b.on{color:var(--command); border-color:var(--command); background:rgba(255,122,26,0.10);}
+.syncross line{stroke:#f2e7cf; stroke-width:1; opacity:0.5;}
+.syncrails line{stroke:#9b4b31; stroke-width:0.8; opacity:0.55;}
+.synctag{position:absolute; font-family:"Bahnschrift",Consolas,monospace; font-size:9px; letter-spacing:2px; color:var(--muted); z-index:2;}
+.synctag.v{left:6px; top:50%; transform:translateY(-50%); writing-mode:vertical-rl;}
+.syncnum.warn{color:var(--warning);}
+.syncnum.crit{color:var(--critical);}
+/* SYNC 状态告警牌：warn/crit 浮现 + 机器节拍脉冲（stripe bars 夹持，skill pattern-language） */
+.syncwarn{position:absolute; left:30px; right:18px; bottom:7%; display:none; justify-content:center; align-items:center; gap:12px; z-index:2;
+  font-family:"Bahnschrift",Consolas,monospace; font-size:13px; letter-spacing:5px; font-weight:bold;}
+.syncwarn.on{display:flex;}
+.syncwarn .swbar{width:56px; height:8px; background:repeating-linear-gradient(-60deg, currentColor 0 5px, transparent 5px 10px);}
+.syncwarn .swbox{border:1px solid currentColor; padding:2px 14px; background:rgba(255,159,67,0.08);}
+.syncwarn.warn{color:var(--warning);}
+.syncwarn.warn .swbox{animation:syncblink 1.1s steps(1) infinite;}
+.syncwarn.crit{color:var(--critical);}
+.syncwarn.crit .swbox{background:rgba(255,77,56,0.12); animation:syncblink 0.6s steps(1) infinite;}
+@keyframes syncblink{50%{opacity:0.2;}}
 .dialunit{min-width:0; display:flex; flex-direction:column; justify-content:center; padding-left:20px;}
 .dialunit .hitline{flex:none; margin-top:0;}
 @media (max-width:1200px){.instrrow{grid-template-columns:1fr;} .syncwrap{display:none;} .dialunit{padding-left:0;}}
@@ -481,7 +496,8 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
         </div>
         <div class="instrrow">
         <div class="syncwrap">
-          <div class="synctitle synchead"><span class="synclabel2">SYNC RATE · 同步率</span><b class="num syncnum" id="syncnum">--</b></div>
+          <div class="synctitle synchead"><span class="synclabel2">SYNC RATE · 同步率</span><span class="swmode"><b id="swm-mat" onclick="syncSetMode('mat')">MAT</b><b id="swm-dual" onclick="syncSetMode('dual')">DUAL</b></span><b class="num syncnum" id="syncnum">--</b></div>
+            <canvas id="synccv" width="506" height="700"></canvas>
             <svg id="syncsvg" viewBox="0 0 506 700" preserveAspectRatio="none" aria-hidden="true">
               <g class="syncvgrid">
                 <line x1="46" y1="0" x2="46" y2="700"/><line x1="92" y1="0" x2="92" y2="700"/>
@@ -490,30 +506,31 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
                 <line x1="322" y1="0" x2="322" y2="700"/><line x1="368" y1="0" x2="368" y2="700"/>
                 <line x1="414" y1="0" x2="414" y2="700"/><line x1="460" y1="0" x2="460" y2="700"/>
               </g>
-              <line id="syncbase" x1="42" y1="316" x2="506" y2="316" class="syncbase"/>
+              <line x1="42" y1="320" x2="506" y2="320" class="syncbase"/>
               <g class="syncticks">
-                <line x1="0" y1="116" x2="8" y2="116"/>
-                <line x1="0" y1="196" x2="8" y2="196"/>
-                <line x1="0" y1="236" x2="8" y2="236"/>
-                <line x1="0" y1="276" x2="8" y2="276"/>
-                <line x1="0" y1="316" x2="8" y2="316"/>
-                <line x1="0" y1="356" x2="8" y2="356"/>
-                <line x1="0" y1="396" x2="8" y2="396"/>
-                <line x1="0" y1="476" x2="8" y2="476"/>
+                <line x1="0" y1="60" x2="8" y2="60"/>
+                <line x1="0" y1="140" x2="8" y2="140"/>
+                <line x1="0" y1="220" x2="8" y2="220"/>
+                <line x1="0" y1="300" x2="8" y2="300"/>
+                <line x1="0" y1="380" x2="8" y2="380"/>
+                <line x1="0" y1="460" x2="8" y2="460"/>
+                <line x1="0" y1="540" x2="8" y2="540"/>
+                <line x1="0" y1="620" x2="8" y2="620"/>
+                <line x1="498" y1="16" x2="506" y2="16"/><line x1="498" y1="32" x2="506" y2="32"/>
+                <line x1="498" y1="48" x2="506" y2="48"/>
+                <line x1="498" y1="652" x2="506" y2="652"/><line x1="498" y1="668" x2="506" y2="668"/>
+                <line x1="498" y1="684" x2="506" y2="684"/>
               </g>
-              <polyline id="syncwave1" class="syncwave" points=""/>
-              <polyline id="syncwave2" class="syncwave" points=""/>
+              <g id="syncdual" style="display:none">
+                <polyline id="syncwave1" class="syncwave dw1" points=""/>
+                <polyline id="syncwave2" class="syncwave dw2" points=""/>
+              </g>
+              <g id="syncross"></g>
+              <g id="syncrails"></g>
             </svg>
-            <div class="syncaxis" aria-hidden="true">
-              <span style="top:16.571%;">100</span>
-              <span style="top:30.857%;">75</span>
-              <span style="top:45.143%;">50</span>
-              <span style="top:59.429%;">25</span>
-            </div>
-            <div class="synclegend" id="synclegend">
-              <span><i class="lg lg1"></i>驾驶员自我意识</span>
-              <span><i class="lg lg2"></i>EVA機体自我意识</span>
-            </div>
+            <div class="synctag v">OSCILLOGRAPH · CH×10</div>
+            <div class="synctag" style="right:20px; bottom:12px;">TRACE 60S · T→</div>
+            <div class="syncwarn" id="syncwarn"><i class="swbar"></i><span class="swbox">WARN · 警告</span><i class="swbar"></i></div>
         </div>
         <div class="dialunit">
             <div class="hitline">
@@ -627,74 +644,117 @@ function flapSchedule(){
 
 /* 重置倒计时：时间戳存这里，render 时刷新，1s ticker 只读（不与 60s 轮询争抢） */
 var CD={q5:null,q7:null,qm:null};
-/* SYNC RATE 示波器：同步率=两波重叠度；A=参考脑波(初号機)，B=EVA频率(零号機)；
-   偏差 dev = pow((1-rate)/0.10, 0.8) -> 相位 0..0.9rad + 振幅差 0..35% + 水平漂移 */
-var SYNC={dev:0, raf:null, mid:316, A:100};
+/* SYNC RATE 示波器（EVA 原版监视屏复刻）：10 条同频正弦波（驾驶员 5 + EVA机体 5）画在 <canvas> 上。
+   原版致密织带的机理 = 荧光屏余辉的时间累积：各波相位在基础偏移上叠加慢速游走，
+   destination-out 拖尾把游走轨迹累积成织带（透镜亮区 = 游走转向处的驻留）。
+   偏差 dev = pow((1-rate)/0.10, 0.8)：加大游走幅度 + EVA 组相位偏移 0..0.9rad、振幅 +0..25%；
+   状态即颜色（eva-ui-skill tokens）：dev<0.5 奶白 / ≥0.5 warning / ≥0.8 critical；
+   warn/crit 时波形区下方浮现告警牌（WARN·警告 / CRIT·暴走，条纹带夹持 + 脉冲闪烁）。
+   Y 轴只留裸刻度线（同原版，无数字——波形纵轴不承载数据，聚散即状态）。 */
+var SYNC={dev:0, st:'', mode:'mat', raf:null};
+try{ var sm=localStorage.getItem('syncmode'); if(sm==='mat'||sm==='dual') SYNC.mode=sm; }catch(e){}
+function syncSetMode(m){
+  SYNC.mode=m;
+  try{ localStorage.setItem('syncmode',m); }catch(e){}
+  var cv=document.getElementById('synccv'), dw=document.getElementById('syncdual');
+  if(cv) cv.style.display=(m==='mat')?'block':'none';
+  if(dw) dw.style.display=(m==='dual')?'':'none';
+  if(m==='dual' && cv){ var cx=cv.getContext('2d'); cx.clearRect(0,0,cv.width,cv.height); }
+  ['mat','dual'].forEach(function(k){ var b=document.getElementById('swm-'+k); if(b) b.className=(k===m?'on':''); });
+}
 function syncDev(r){
   if(r==null || r>=1.0) return 0;
   if(r<=0.90) return 1;
   return Math.pow((1-r)/0.10, 0.8);
 }
-/* 动态对齐：每轮渲染实测两 svg 的屏幕几何，使基线 screenY == dial 圆心 screenY
-   （dial viewBox cy=150/300=50%）。刻度/轴标签/图例全部由 SYNC.mid 单源派生，
-   布局任何变化（高度/宽度/字号）后自动保持对齐。
-   刻度标度：sync% = 50 + (mid - y)/k，k=A/25（A ↔ ±25 常规振幅）。
-   基线=50；常态波峰≈75、波谷≈25；dev=1 时 ~88/12 逼近 100/0 边缘。 */
-function syncAlign(){
-  var hs=document.getElementById('hsvg'), ss=document.getElementById('syncsvg');
-  if(!hs||!ss) return;
-  var hr=hs.getBoundingClientRect(), sr=ss.getBoundingClientRect();
-  if(!hr.height||!sr.height) return;
-  var sy=sr.height/700, swH=sr.height+7;
-  SYNC.mid=(hr.top+hr.height*0.5-sr.top)/sy;
-  var m=SYNC.mid.toFixed(1);
-  var sb=document.getElementById('syncbase');
-  if(sb){ sb.setAttribute('y1',m); sb.setAttribute('y2',m); }
-  var k=SYNC.A/25;
-  var offs=[-50*k,-37.5*k,-25*k,-12.5*k,0,12.5*k,25*k,37.5*k];
-  var tk=document.querySelectorAll('.syncticks line');
-  for(var i=0;i<tk.length&&i<offs.length;i++){
-    var v=Math.max(6,Math.min(694,SYNC.mid+offs[i])).toFixed(1);
-    tk[i].setAttribute('y1',v); tk[i].setAttribute('y2',v);
+function syncEnsure(){
+  var c=document.getElementById('syncross');
+  if(c && !c.childNodes.length){
+    var ns='http://www.w3.org/2000/svg';
+    var mkL=function(g,x1,y1,x2,y2){var l=document.createElementNS(ns,'line');l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);g.appendChild(l);};
+    // 瞄准十字（原版监视屏特征）：上 5 + 下 5
+    [60,167,268,374,440].forEach(function(px){
+      [28,672].forEach(function(py){ mkL(c,px-5,py,px+5,py); mkL(c,px,py-5,px,py+5); });
+    });
+    // 校准刻度轨（skill: tick fields / calibration rails）：左缘密尺 + 顶/底时间基准轨
+    var r=document.getElementById('syncrails');
+    if(r){
+      for(var ry=14; ry<=686; ry+=14){ mkL(r,0,ry,6,ry); }
+      for(var rx=42; rx<=506; rx+=9.28){ mkL(r,rx,6,rx,14); mkL(r,rx,686,rx,694); }
+    }
+    // 应用持久化选择（chip 用内联 onclick 绑定；只在初始化时执行一次，
+    // 不能放进 rAF 循环——syncSetMode 里的 localStorage 写入是同步磁盘 IO）
+    syncSetMode(SYNC.mode);
   }
-  var ax=document.querySelectorAll('.syncaxis span');
-  var labOffs=[-50*k,-25*k,0,25*k];
-  for(var j=0;j<ax.length&&j<labOffs.length;j++){
-    ax[j].style.top=((SYNC.mid+labOffs[j])/7).toFixed(3)+'%';
-  }
-  var lg=document.getElementById('synclegend');
-  if(lg){
-    var worst=(SYNC.mid+SYNC.A*1.35*1.12)*sy+20+7;
-    lg.style.top=Math.min(worst,swH-24)+'px';
-  }
+  return document.getElementById('synccv');
 }
-window.addEventListener('resize',syncAlign);
 function syncDraw(){
-  if(!document.getElementById('syncsvg')){ SYNC.raf=null; return; }
-  var w1=document.getElementById('syncwave1'), w2=document.getElementById('syncwave2');
-  var W=506, n=110, X0=42, mid=SYNC.mid, A=SYNC.A;
+  var cv=syncEnsure();
+  if(!cv){ SYNC.raf=null; return; }
+  var ctx=cv.getContext('2d');
+  var W=506, mid=320, n=110, A=100, X0=42;
   var t=(typeof performance!=='undefined'&&performance.now?performance.now():Date.now())/1000;
   var dev=SYNC.dev;
   var wob=1+0.12*Math.sin(t*0.7);
-  var p1=[], p2=[];
-  for(var i=0;i<=n;i++){
-    var x=X0+i/n*(W-X0);
-    var ph=(x/W)*Math.PI*4 - t*2.4;
-    var nz=0.03*Math.sin(t*3.1+i*0.9);
-    var ampB=A*(1+0.35*dev);
-    p1.push(x.toFixed(1)+','+(mid-Math.sin(ph)*(A+nz*40)*wob).toFixed(1));
-    p2.push(x.toFixed(1)+','+(mid-Math.sin(ph+dev*0.9+x*0.05*dev)*(ampB+nz*40)*wob).toFixed(1));
+  var ampB=A*(1+0.25*dev);    // EVA 组振幅偏移（原语义：偏差加大振幅）
+  if(SYNC.mode==='dual'){
+    // 双线模式（仓库原版示波器）：驾驶员=command 橙 / EVA机体=琥珀
+    var w1=document.getElementById('syncwave1'), w2=document.getElementById('syncwave2');
+    var p1=[], p2=[];
+    for(var i=0;i<=n;i++){
+      var x=X0+i/n*(W-X0);
+      var ph=(x/W)*Math.PI*4 - t*2.4;
+      var nz=0.03*Math.sin(t*3.1+i*0.9);
+      p1.push(x.toFixed(1)+','+(mid-Math.sin(ph)*(A+nz*40)*wob).toFixed(1));
+      p2.push(x.toFixed(1)+','+(mid-Math.sin(ph+dev*0.9+x*0.05*dev)*(ampB+nz*40)*wob).toFixed(1));
+    }
+    if(w1) w1.setAttribute('points',p1.join(' '));
+    if(w2) w2.setAttribute('points',p2.join(' '));
+    SYNC.raf=requestAnimationFrame(syncDraw);
+    return;
   }
-  if(w1) w1.setAttribute('points', p1.join(' '));
-  if(w2) w2.setAttribute('points', p2.join(' '));
+  var wand=0.50+0.70*dev;     // 单波相位游走幅度（拖尾把游走织成垫）
+  var ampJ=0.02+0.04*dev;     // 组内振幅散布（轻纹理）
+  var yoffJ=0.5+1.5*dev;      // 组内纵向散布（同上）
+  var dph=0.9*dev;            // EVA 组相位偏移（原语义）
+  ctx.globalCompositeOperation='destination-out';
+  ctx.fillStyle='rgba(0,0,0,0.03)';
+  ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.globalCompositeOperation='source-over';
+  var pal=SYNC.st==='crit'?['#ff8a70','rgba(255,77,56,0.22)']:
+        (SYNC.st==='warn'?['#ffcf8f','rgba(255,159,67,0.16)']:['#f5edd8','rgba(242,231,207,0.14)']);
+  ctx.lineJoin='round';
+  for(var j=0;j<10;j++){
+    var eva=j>=5, jj=j%5;
+    var amp=(eva?ampB:A)*(1+(jj-2)*ampJ);
+    var off=(j-4.5)/4.5*0.35+(eva?dph:0)+Math.sin(t*(0.13+0.017*j)+j*2.4)*wand;
+    var yoff=(jj-2)*yoffJ;
+    for(var pass=0;pass<2;pass++){
+      ctx.strokeStyle=pass?pal[0]:pal[1];
+      ctx.lineWidth=pass?1.1:2.8;
+      ctx.beginPath();
+      for(var i=0;i<=n;i++){
+        var x=X0+i/n*(W-X0);
+        var ph=(x/W)*Math.PI*4 - t*2.4;
+        var nz=0.03*Math.sin(t*3.1+i*0.9);
+        var y=mid+yoff-Math.sin(ph+off)*(amp+nz*40)*wob;
+        if(i) ctx.lineTo(x,y); else ctx.moveTo(x,y);
+      }
+      ctx.stroke();
+    }
+  }
   SYNC.raf=requestAnimationFrame(syncDraw);
 }
-function syncStart(){ if(!SYNC.raf && document.getElementById('syncsvg')) SYNC.raf=requestAnimationFrame(syncDraw); }
+function syncStart(){ if(!SYNC.raf && document.getElementById('synccv')) SYNC.raf=requestAnimationFrame(syncDraw); }
 function syncSetRate(r){
   SYNC.dev=syncDev(r);
+  SYNC.st=SYNC.dev>=0.8?'crit':(SYNC.dev>=0.5?'warn':'');
   var sn=document.getElementById('syncnum');
-  if(sn) sn.textContent=(r==null?'--':('MIN '+(r*100).toFixed(1)+'%'))+' · DEV '+Math.round(SYNC.dev*100)+'%';
-  syncAlign();
+  if(sn){ sn.textContent=(r==null?'--':('MIN '+(r*100).toFixed(1)+'%'))+' · DEV '+Math.round(SYNC.dev*100)+'%';
+    sn.className='num syncnum'+(SYNC.st?' '+SYNC.st:''); }
+  var wn=document.getElementById('syncwarn');
+  if(wn){ wn.className='syncwarn'+(SYNC.st?' on '+SYNC.st:'');
+    wn.querySelector('.swbox').textContent=SYNC.st==='crit'?'CRIT · 暴走':'WARN · 警告'; }
   syncStart();
 }
 /* 动画重触发守卫：值没变就不重播（steps 机器节拍） */
