@@ -506,7 +506,7 @@ table.titleblock td.tb-label{color:var(--muted); font-size:11px; letter-spacing:
                 <line x1="322" y1="0" x2="322" y2="700"/><line x1="368" y1="0" x2="368" y2="700"/>
                 <line x1="414" y1="0" x2="414" y2="700"/><line x1="460" y1="0" x2="460" y2="700"/>
               </g>
-              <line x1="42" y1="320" x2="506" y2="320" class="syncbase"/>
+              <line id="syncbase" x1="42" y1="320" x2="506" y2="320" class="syncbase"/>
               <g class="syncticks">
                 <line x1="0" y1="60" x2="8" y2="60"/>
                 <line x1="0" y1="140" x2="8" y2="140"/>
@@ -651,7 +651,7 @@ var CD={q5:null,q7:null,qm:null};
    状态即颜色（eva-ui-skill tokens）：dev<0.5 奶白 / ≥0.5 warning / ≥0.8 critical；
    warn/crit 时波形区下方浮现告警牌（WARN·警告 / CRIT·暴走，条纹带夹持 + 脉冲闪烁）。
    Y 轴只留裸刻度线（同原版，无数字——波形纵轴不承载数据，聚散即状态）。 */
-var SYNC={dev:0, st:'', mode:'mat', raf:null};
+var SYNC={dev:0, st:'', mode:'mat', mid:320, raf:null};
 try{ var sm=localStorage.getItem('syncmode'); if(sm==='mat'||sm==='dual') SYNC.mode=sm; }catch(e){}
 function syncSetMode(m){
   SYNC.mode=m;
@@ -667,6 +667,20 @@ function syncDev(r){
   if(r<=0.90) return 1;
   return Math.pow((1-r)/0.10, 0.8);
 }
+/* 动态对齐（移植自 syncAlign 思路）：每轮渲染 + resize 实测圆盘 hsvg 的屏幕圆心，
+   反推波形中线 SYNC.mid（viewBox 单位），基准线跟随；布局/字号/窗口变化后自动保持对齐。
+   刻度家具为无数字裸刻度，静态即可，不参与派生。 */
+function syncAlign(){
+  var hs=document.getElementById('hsvg'), ss=document.getElementById('syncsvg');
+  if(!hs||!ss) return;
+  var hr=hs.getBoundingClientRect(), sr=ss.getBoundingClientRect();
+  if(!hr.height||!sr.height) return;
+  var sy=sr.height/700;
+  SYNC.mid=Math.max(200, Math.min(460, (hr.top+hr.height*0.5-sr.top)/sy));
+  var sb=document.getElementById('syncbase');
+  if(sb){ var m=SYNC.mid.toFixed(1); sb.setAttribute('y1',m); sb.setAttribute('y2',m); }
+}
+window.addEventListener('resize',syncAlign);
 function syncEnsure(){
   var c=document.getElementById('syncross');
   if(c && !c.childNodes.length){
@@ -692,7 +706,7 @@ function syncDraw(){
   var cv=syncEnsure();
   if(!cv){ SYNC.raf=null; return; }
   var ctx=cv.getContext('2d');
-  var W=506, mid=320, n=110, A=100, X0=42;
+  var W=506, n=110, A=100, X0=42, mid=SYNC.mid;
   var t=(typeof performance!=='undefined'&&performance.now?performance.now():Date.now())/1000;
   var dev=SYNC.dev;
   var wob=1+0.12*Math.sin(t*0.7);
@@ -755,6 +769,7 @@ function syncSetRate(r){
   var wn=document.getElementById('syncwarn');
   if(wn){ wn.className='syncwarn'+(SYNC.st?' on '+SYNC.st:'');
     wn.querySelector('.swbox').textContent=SYNC.st==='crit'?'CRIT · 暴走':'WARN · 警告'; }
+  syncAlign();
   syncStart();
 }
 /* 动画重触发守卫：值没变就不重播（steps 机器节拍） */
@@ -1083,11 +1098,12 @@ function render(d){
   if(r2) r2.textContent=(worst*100).toFixed(1)+'%';
   var r3=document.getElementById('rail3');
   if(r3) r3.textContent=fmt(d.turns);
-  // ECG 心率：近 10 分钟活跃分钟数 -> BPM(40..140)，写入 window._ecgBpm 供彗星驱动
+  // ECG 心率：近 10 分钟活跃分钟数 × SYNC.dev 联合驱动；色态/心律随 dev 切换
   var hs=d.hitSeries||[];
   var act=0;
   for(var q=Math.max(0,hs.length-10); q<hs.length; q++){ if(hs[q]&&hs[q].rate!=null) act++; }
-  window._ecgBpm=Math.min(140, 40+act*10);
+  window._ecgBpm=Math.min(180, Math.round((40+act*10)*(1+SYNC.dev*0.8)));
+  window._ecgSt=SYNC.st;
   // ECG 彗星：亮核 + 连续余晖（rAF 驱动；一圈 480/BPM 秒）
   (function(){
     if(window._ecgComet) return; window._ecgComet=true;
@@ -1096,7 +1112,7 @@ function render(d){
     var trail=document.getElementById('ecgtrail');
     var tg=document.getElementById('ecgtg');
     if(!wave||!lead||!trail||!tg) return;
-    var L=wave.getTotalLength(), pts=[], last=0, t0=performance.now();
+    var L=wave.getTotalLength(), pts=[], last=0, t0=performance.now(), lastCol='';
     function frame(now){
       var bpm=window._ecgBpm||90;
       var dur=480/bpm*1000;
@@ -1104,13 +1120,23 @@ function render(d){
       if(dist<last){ pts=[]; }          // 折返清零：消除右端到左端的连线
       last=dist;
       var p=wave.getPointAtLength(dist);
-      lead.setAttribute('cx',p.x.toFixed(1)); lead.setAttribute('cy',p.y.toFixed(1));
-      pts.push(p);                       // 全程留痕：扫过即"打印"，形成心电波形
+      var jit=window._ecgSt==='crit'?(Math.random()-0.5)*2.4:0;   // 暴走：心律失常抖动
+      lead.setAttribute('cx',p.x.toFixed(1)); lead.setAttribute('cy',(p.y+jit).toFixed(1));
+      pts.push({x:p.x,y:p.y+jit});       // 全程留痕：扫过即"打印"，形成心电波形
       var dd='M'+pts[0].x.toFixed(1)+','+pts[0].y.toFixed(1);
       for(var i=1;i<pts.length;i++){ dd+=' L'+pts[i].x.toFixed(1)+','+pts[i].y.toFixed(1); }
       trail.setAttribute('d',dd);
       tg.setAttribute('x1',pts[0].x.toFixed(1));
       tg.setAttribute('x2',p.x.toFixed(1));
+      // 色态（与同步率示波器同 tokens）：常态 command 橙 / warn 琥珀 / crit 红
+      var stc=window._ecgSt||'';
+      var col=stc==='crit'?'#ff4d38':(stc==='warn'?'#ff9f43':'#ff7a1a');
+      if(col!==lastCol){
+        lastCol=col;
+        lead.setAttribute('fill',col);
+        var stops=tg.getElementsByTagName('stop');
+        for(var si=0;si<stops.length;si++) stops[si].setAttribute('stop-color',col);
+      }
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
