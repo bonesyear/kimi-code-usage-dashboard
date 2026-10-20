@@ -4,6 +4,8 @@
 
 ![screenshot](docs/screenshot.png)
 
+小红书演示视频：https://xhslink.cn/o/8MxSLKWRA2Y
+
 ## 快速开始
 
 需要 Python 3.8+（仅用标准库）：
